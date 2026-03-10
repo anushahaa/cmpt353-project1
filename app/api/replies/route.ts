@@ -1,0 +1,82 @@
+import { prisma } from "@/lib/db";
+import { isAllowedUpload, saveFile } from "@/lib/upload";
+import { replySchema, formatZodError } from "@/lib/validation";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET(req: NextRequest) {
+  const postId = req.nextUrl.searchParams.get("postId");
+
+  const replies = await prisma.reply.findMany({
+    where: postId ? { postId: Number(postId) } : undefined,
+    orderBy: { createdAt: "asc" },
+    include: {
+      author: true,
+      attachments: true
+    }
+  });
+
+  return NextResponse.json(replies);
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const formData = await req.formData();
+
+    const payload = {
+      postId: formData.get("postId"),
+      authorId: formData.get("authorId"),
+      body: formData.get("body")
+    };
+
+    const parsed = replySchema.safeParse(payload);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: formatZodError(parsed.error) },
+        { status: 400 }
+      );
+    }
+
+    const attachment = formData.get("attachment");
+
+    const reply = await prisma.reply.create({
+      data: {
+        ...parsed.data,
+        parentReplyId: null
+      }
+    });
+
+    if (attachment && attachment instanceof File && attachment.size > 0) {
+      const uploadError = isAllowedUpload(
+        attachment.type,
+        attachment.name,
+        attachment.size
+      );
+
+      if (uploadError) {
+        await prisma.reply.delete({ where: { id: reply.id } });
+        return NextResponse.json({ error: uploadError }, { status: 400 });
+      }
+
+      const saved = await saveFile(attachment);
+
+      await prisma.attachment.create({
+        data: {
+          targetType: "reply",
+          targetId: reply.id,
+          mimeType: saved.mimeType,
+          sizeBytes: saved.sizeBytes,
+          path: saved.relativePath,
+          replyId: reply.id
+        }
+      });
+    }
+
+    return NextResponse.json(reply, { status: 201 });
+  } catch {
+    return NextResponse.json(
+      { error: "Unable to create reply." },
+      { status: 500 }
+    );
+  }
+}

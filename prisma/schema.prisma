@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  displayName  String
+  passwordHash String
+  role         String    @default("user")
+  channels     Channel[]
+  posts        Post[]
+  replies      Reply[]
+  createdAt    DateTime  @default(now())
+}
+
+model Channel {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdBy   Int
+  createdAt   DateTime @default(now())
+
+  creator User   @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  posts   Post[]
+}
+
+model Post {
+  id         Int      @id @default(autoincrement())
+  channelId  Int
+  authorId   Int
+  title      String
+  body       String
+  createdAt  DateTime @default(now())
+
+  channel     Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  replies     Reply[]
+  attachments Attachment[]
+
+  @@index([channelId, createdAt])
+}
+
+model Reply {
+  id            Int      @id @default(autoincrement())
+  postId         Int
+  parentReplyId  Int?
+  authorId       Int
+  body           String
+  createdAt      DateTime @default(now())
+
+  post         Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author       User    @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  parentReply  Reply?  @relation("ReplyToReply", fields: [parentReplyId], references: [id], onDelete: Cascade)
+  childReplies Reply[] @relation("ReplyToReply")
+  attachments  Attachment[]
+
+  @@index([postId, createdAt])
+}
+
+model Attachment {
+  id         Int      @id @default(autoincrement())
+  targetType String
+  targetId    Int
+  mimeType    String
+  sizeBytes   Int
+  path        String
+  createdAt   DateTime @default(now())
+
+  postId  Int?
+  replyId Int?
+
+  post  Post?  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reply Reply? @relation(fields: [replyId], references: [id], onDelete: Cascade)
+
+  @@index([targetType, targetId])
+}
