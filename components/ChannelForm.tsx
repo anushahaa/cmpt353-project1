@@ -1,22 +1,32 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
-type User = {
-  id: number;
-  displayName: string;
-};
+type CurrentUser =
+  | {
+      id: number;
+      email: string;
+      displayName: string;
+      role: string;
+    }
+  | null;
 
-export default function ChannelForm({ users }: { users: User[] }) {
+export default function ChannelForm({ currentUser }: { currentUser: CurrentUser }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [createdBy, setCreatedBy] = useState(users[0]?.id?.toString() ?? "");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!currentUser) {
+      setError("You must be logged in to create a channel.");
+      return;
+    }
+
     setError("");
     setSuccess("");
     setLoading(true);
@@ -29,8 +39,7 @@ export default function ChannelForm({ users }: { users: User[] }) {
         },
         body: JSON.stringify({
           name,
-          description,
-          createdBy
+          description
         })
       });
 
@@ -52,8 +61,22 @@ export default function ChannelForm({ users }: { users: User[] }) {
     }
   }
 
+  if (!currentUser) {
+    return (
+      <div className="empty-state">
+        <p>You must be logged in to create a channel.</p>
+        <div className="small-gap">
+          <Link href="/login">Login</Link>
+          <Link href="/signup">Sign up</Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit}>
+      <p className="meta">Creating as {currentUser.displayName}</p>
+
       <div>
         <label htmlFor="channel-name">Channel name</label>
         <input
@@ -73,22 +96,6 @@ export default function ChannelForm({ users }: { users: User[] }) {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="What is this channel for?"
         />
-      </div>
-
-      <div style={{ marginTop: "0.8rem" }}>
-        <label htmlFor="channel-user">Creator</label>
-        <select
-          id="channel-user"
-          value={createdBy}
-          onChange={(e) => setCreatedBy(e.target.value)}
-          required
-        >
-          {users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.displayName}
-            </option>
-          ))}
-        </select>
       </div>
 
       <div style={{ marginTop: "1rem" }}>

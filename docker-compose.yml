@@ -22,6 +22,7 @@ services:
       - db
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/channel_qna
+      SESSION_SECRET: docker-dev-session-secret
     ports:
       - "3000:3000"
     volumes:

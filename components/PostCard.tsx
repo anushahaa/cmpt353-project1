@@ -27,17 +27,21 @@ type Post = {
   replies: Reply[];
 };
 
-type User = {
-  id: number;
-  displayName: string;
-};
+type CurrentUser =
+  | {
+      id: number;
+      email: string;
+      displayName: string;
+      role: string;
+    }
+  | null;
 
 export default function PostCard({
   post,
-  users
+  currentUser
 }: {
   post: Post;
-  users: User[];
+  currentUser: CurrentUser;
 }) {
   return (
     <article className="post-card">
@@ -84,7 +88,7 @@ export default function PostCard({
         )}
 
         <div style={{ marginTop: "1rem" }}>
-          <ReplyForm postId={post.id} users={users} />
+          <ReplyForm postId={post.id} currentUser={currentUser} />
         </div>
       </section>
     </article>

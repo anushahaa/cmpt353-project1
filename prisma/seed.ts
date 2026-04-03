@@ -1,82 +1,97 @@
 import { PrismaClient } from "@prisma/client";
+import { hashPassword } from "../lib/auth";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const existingUsers = await prisma.user.count();
+  const adminHash = await hashPassword("admin123");
+  const aliceHash = await hashPassword("alice123");
+  const bobHash = await hashPassword("bob123");
 
-  if (existingUsers > 0) {
-    console.log("Seed skipped: data already exists.");
-    return;
-  }
-
-  const alice = await prisma.user.create({
-    data: {
-      displayName: "Alice",
-      passwordHash: "part1-no-auth-yet",
-      role: "user"
-    }
-  });
-
-  const bob = await prisma.user.create({
-    data: {
-      displayName: "Bob",
-      passwordHash: "part1-no-auth-yet",
-      role: "user"
-    }
-  });
-
-  const carol = await prisma.user.create({
-    data: {
-      displayName: "Carol",
-      passwordHash: "part1-no-auth-yet",
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@example.com" },
+    update: {},
+    create: {
+      email: "admin@example.com",
+      displayName: "Admin",
+      passwordHash: adminHash,
       role: "admin"
     }
   });
 
-  const jsChannel = await prisma.channel.create({
-    data: {
-      name: "javascript",
-      description: "Questions about JavaScript, Node.js, and frontend issues.",
-      createdBy: alice.id
+  const alice = await prisma.user.upsert({
+    where: { email: "alice@example.com" },
+    update: {},
+    create: {
+      email: "alice@example.com",
+      displayName: "Alice",
+      passwordHash: aliceHash,
+      role: "user"
     }
   });
 
-  const dockerChannel = await prisma.channel.create({
-    data: {
-      name: "docker",
-      description: "Containers, Dockerfiles, Compose, and deployment basics.",
-      createdBy: bob.id
+  const bob = await prisma.user.upsert({
+    where: { email: "bob@example.com" },
+    update: {},
+    create: {
+      email: "bob@example.com",
+      displayName: "Bob",
+      passwordHash: bobHash,
+      role: "user"
     }
   });
 
-  const post1 = await prisma.post.create({
-    data: {
-      channelId: jsChannel.id,
-      authorId: alice.id,
-      title: "Why is my fetch request returning 400?",
-      body: "I am sending JSON from a form but my API keeps responding with status 400. What should I check first?"
-    }
-  });
+  const channelCount = await prisma.channel.count();
 
-  await prisma.reply.create({
-    data: {
-      postId: post1.id,
-      authorId: bob.id,
-      body: "Check that your Content-Type header is application/json and that the body fields match what the API expects."
-    }
-  });
+  if (channelCount === 0) {
+    const jsChannel = await prisma.channel.create({
+      data: {
+        name: "javascript",
+        description: "Questions about JavaScript, Node.js, and frontend issues.",
+        createdBy: alice.id
+      }
+    });
 
-  await prisma.post.create({
-    data: {
-      channelId: dockerChannel.id,
-      authorId: bob.id,
-      title: "Docker container cannot connect to Postgres",
-      body: "My app works locally but inside Docker it cannot reach the database service."
-    }
-  });
+    const dockerChannel = await prisma.channel.create({
+      data: {
+        name: "docker",
+        description: "Containers, Dockerfiles, Compose, and deployment basics.",
+        createdBy: bob.id
+      }
+    });
 
-  console.log("Seed complete.");
+    const post1 = await prisma.post.create({
+      data: {
+        channelId: jsChannel.id,
+        authorId: alice.id,
+        title: "Why is my fetch request returning 400?",
+        body: "I am sending JSON from a form but my API keeps responding with status 400. What should I check first?"
+      }
+    });
+
+    await prisma.reply.create({
+      data: {
+        postId: post1.id,
+        authorId: bob.id,
+        body: "Check that your Content-Type header is application/json and that the body fields match what the API expects."
+      }
+    });
+
+    await prisma.post.create({
+      data: {
+        channelId: dockerChannel.id,
+        authorId: bob.id,
+        title: "Docker container cannot connect to Postgres",
+        body: "My app works locally but inside Docker it cannot reach the database service."
+      }
+    });
+
+    console.log("Seed complete.");
+  } else {
+    console.log("Seed skipped: channel data already exists.");
+  }
+
+  console.log("Admin credentials: admin@example.com / admin123");
 }
 
 main()

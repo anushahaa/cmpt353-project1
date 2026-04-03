@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import PostForm from "@/components/PostForm";
 import PostCard from "@/components/PostCard";
+import { getCurrentUser } from "@/lib/session";
 
 type Props = {
   params: {
@@ -16,13 +17,10 @@ export default async function ChannelPage({ params }: Props) {
     notFound();
   }
 
-  const [channel, users, posts] = await Promise.all([
+  const [channel, posts, currentUser] = await Promise.all([
     prisma.channel.findUnique({
       where: { id: channelId },
       include: { creator: true }
-    }),
-    prisma.user.findMany({
-      orderBy: { displayName: "asc" }
     }),
     prisma.post.findMany({
       where: { channelId },
@@ -38,7 +36,8 @@ export default async function ChannelPage({ params }: Props) {
           }
         }
       }
-    })
+    }),
+    getCurrentUser()
   ]);
 
   if (!channel) {
@@ -50,14 +49,12 @@ export default async function ChannelPage({ params }: Props) {
       <section className="hero">
         <h1>#{channel.name}</h1>
         <p>{channel.description || "No description provided."}</p>
-        <p className="meta">
-          Created by {channel.creator.displayName}
-        </p>
+        <p className="meta">Created by {channel.creator.displayName}</p>
       </section>
 
       <section className="form-card">
         <h2>Create a post</h2>
-        <PostForm channelId={channel.id} users={users} />
+        <PostForm channelId={channel.id} currentUser={currentUser} />
       </section>
 
       <section className="stack">
@@ -67,7 +64,9 @@ export default async function ChannelPage({ params }: Props) {
             No posts yet. Be the first to ask a question in this channel.
           </div>
         ) : (
-          posts.map((post) => <PostCard key={post.id} post={post} users={users} />)
+          posts.map((post) => (
+            <PostCard key={post.id} post={post} currentUser={currentUser} />
+          ))
         )}
       </section>
     </div>

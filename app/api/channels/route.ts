@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/session";
 import { channelSchema, formatZodError } from "@/lib/validation";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -18,6 +19,15 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Access denied. Please log in to create a channel." },
+        { status: 401 }
+      );
+    }
+
     const json = await req.json();
     const parsed = channelSchema.safeParse(json);
 
@@ -43,7 +53,7 @@ export async function POST(req: NextRequest) {
       data: {
         name: parsed.data.name,
         description: parsed.data.description || null,
-        createdBy: parsed.data.createdBy
+        createdBy: currentUser.id
       }
     });
 

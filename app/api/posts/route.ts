@@ -1,42 +1,43 @@
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/session";
 import { isAllowedUpload, saveFile } from "@/lib/upload";
-import { postSchema, formatZodError } from "@/lib/validation";
+import { replySchema, formatZodError } from "@/lib/validation";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
-  const channelId = req.nextUrl.searchParams.get("channelId");
+  const postId = req.nextUrl.searchParams.get("postId");
 
-  const posts = await prisma.post.findMany({
-    where: channelId ? { channelId: Number(channelId) } : undefined,
-    orderBy: { createdAt: "desc" },
+  const replies = await prisma.reply.findMany({
+    where: postId ? { postId: Number(postId) } : undefined,
+    orderBy: { createdAt: "asc" },
     include: {
       author: true,
-      attachments: true,
-      replies: {
-        include: {
-          author: true,
-          attachments: true
-        },
-        orderBy: { createdAt: "asc" }
-      }
+      attachments: true
     }
   });
 
-  return NextResponse.json(posts);
+  return NextResponse.json(replies);
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Access denied. Please log in to reply." },
+        { status: 401 }
+      );
+    }
+
     const formData = await req.formData();
 
     const payload = {
-      channelId: formData.get("channelId"),
-      authorId: formData.get("authorId"),
-      title: formData.get("title"),
+      postId: formData.get("postId"),
       body: formData.get("body")
     };
 
-    const parsed = postSchema.safeParse(payload);
+    const parsed = replySchema.safeParse(payload);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -47,8 +48,12 @@ export async function POST(req: NextRequest) {
 
     const attachment = formData.get("attachment");
 
-    const post = await prisma.post.create({
-      data: parsed.data
+    const reply = await prisma.reply.create({
+      data: {
+        ...parsed.data,
+        authorId: currentUser.id,
+        parentReplyId: null
+      }
     });
 
     if (attachment && attachment instanceof File && attachment.size > 0) {
@@ -59,7 +64,7 @@ export async function POST(req: NextRequest) {
       );
 
       if (uploadError) {
-        await prisma.post.delete({ where: { id: post.id } });
+        await prisma.reply.delete({ where: { id: reply.id } });
         return NextResponse.json({ error: uploadError }, { status: 400 });
       }
 
@@ -67,20 +72,20 @@ export async function POST(req: NextRequest) {
 
       await prisma.attachment.create({
         data: {
-          targetType: "post",
-          targetId: post.id,
+          targetType: "reply",
+          targetId: reply.id,
           mimeType: saved.mimeType,
           sizeBytes: saved.sizeBytes,
           path: saved.relativePath,
-          postId: post.id
+          replyId: reply.id
         }
       });
     }
 
-    return NextResponse.json(post, { status: 201 });
+    return NextResponse.json(reply, { status: 201 });
   } catch {
     return NextResponse.json(
-      { error: "Unable to create post." },
+      { error: "Unable to create reply." },
       { status: 500 }
     );
   }

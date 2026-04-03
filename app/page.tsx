@@ -2,9 +2,10 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import ChannelForm from "@/components/ChannelForm";
 import ChannelList from "@/components/ChannelList";
+import { getCurrentUser } from "@/lib/session";
 
 export default async function HomePage() {
-  const [channels, users] = await Promise.all([
+  const [channels, currentUser] = await Promise.all([
     prisma.channel.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -14,9 +15,7 @@ export default async function HomePage() {
         }
       }
     }),
-    prisma.user.findMany({
-      orderBy: { displayName: "asc" }
-    })
+    getCurrentUser()
   ]);
 
   return (
@@ -44,7 +43,7 @@ export default async function HomePage() {
 
         <div className="form-card" id="create-channel">
           <h2>Create channel</h2>
-          <ChannelForm users={users} />
+          <ChannelForm currentUser={currentUser} />
         </div>
       </section>
     </div>

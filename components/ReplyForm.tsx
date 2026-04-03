@@ -1,20 +1,24 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
-type User = {
-  id: number;
-  displayName: string;
-};
+type CurrentUser =
+  | {
+      id: number;
+      email: string;
+      displayName: string;
+      role: string;
+    }
+  | null;
 
 export default function ReplyForm({
   postId,
-  users
+  currentUser
 }: {
   postId: number;
-  users: User[];
+  currentUser: CurrentUser;
 }) {
-  const [authorId, setAuthorId] = useState(users[0]?.id?.toString() ?? "");
   const [body, setBody] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
@@ -23,6 +27,12 @@ export default function ReplyForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!currentUser) {
+      setError("You must be logged in to reply.");
+      return;
+    }
+
     setError("");
     setSuccess("");
     setLoading(true);
@@ -30,7 +40,6 @@ export default function ReplyForm({
     try {
       const formData = new FormData();
       formData.append("postId", String(postId));
-      formData.append("authorId", authorId);
       formData.append("body", body);
 
       if (file) {
@@ -60,23 +69,21 @@ export default function ReplyForm({
     }
   }
 
+  if (!currentUser) {
+    return (
+      <div className="empty-state">
+        <p>You must be logged in to reply.</p>
+        <div className="small-gap">
+          <Link href="/login">Login</Link>
+          <Link href="/signup">Sign up</Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit}>
-      <div>
-        <label htmlFor={`reply-author-${postId}`}>Author</label>
-        <select
-          id={`reply-author-${postId}`}
-          value={authorId}
-          onChange={(e) => setAuthorId(e.target.value)}
-          required
-        >
-          {users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.displayName}
-            </option>
-          ))}
-        </select>
-      </div>
+      <p className="meta">Replying as {currentUser.displayName}</p>
 
       <div style={{ marginTop: "0.8rem" }}>
         <label htmlFor={`reply-body-${postId}`}>Reply</label>

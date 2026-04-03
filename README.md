@@ -1,14 +1,16 @@
-# Channel-Based Programming Q&A Tool — Part 1
+# Channel-Based Programming Q&A Tool
 
-This is a Part 1 implementation of the project:
-- landing page
-- channel list + create + select
-- post list + create in a channel
-- reply to a post
-- screenshot upload and display
-- PostgreSQL persistence
-- Docker Compose setup
-- seed data included
+This project is a channel-based programming Q&A system built with Next.js, Prisma, PostgreSQL, and Docker.
+
+## Features implemented so far
+- Landing page explaining the tool
+- Channel list, create, and select
+- Posts inside channels
+- Replies to posts
+- Screenshot uploads and display
+- Accounts: sign up, sign in, sign out
+- Auth required for all write actions
+- Admin moderation: delete users, channels, posts, and replies
 
 ## Tech stack
 - Next.js 14
@@ -16,7 +18,6 @@ This is a Part 1 implementation of the project:
 - PostgreSQL
 - Docker Compose
 
-## Run steps
-
+## Run with Docker
 ```bash
 docker compose up --build

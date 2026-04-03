@@ -3,7 +3,13 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   const users = await prisma.user.findMany({
-    orderBy: { displayName: "asc" }
+    orderBy: { displayName: "asc" },
+    select: {
+      id: true,
+      displayName: true,
+      role: true,
+      createdAt: true
+    }
   });
 
   return NextResponse.json(users);

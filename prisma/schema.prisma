@@ -9,6 +9,7 @@ datasource db {
 
 model User {
   id           Int       @id @default(autoincrement())
+  email        String    @unique
   displayName  String
   passwordHash String
   role         String    @default("user")
@@ -25,20 +26,20 @@ model Channel {
   createdBy   Int
   createdAt   DateTime @default(now())
 
-  creator User   @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  creator User   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   posts   Post[]
 }
 
 model Post {
-  id         Int      @id @default(autoincrement())
-  channelId  Int
-  authorId   Int
-  title      String
-  body       String
-  createdAt  DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  channelId Int
+  authorId  Int
+  title     String
+  body      String
+  createdAt DateTime @default(now())
 
   channel     Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  author      User         @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   replies     Reply[]
   attachments Attachment[]
 
@@ -54,7 +55,7 @@ model Reply {
   createdAt      DateTime @default(now())
 
   post         Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author       User    @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  author       User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
   parentReply  Reply?  @relation("ReplyToReply", fields: [parentReplyId], references: [id], onDelete: Cascade)
   childReplies Reply[] @relation("ReplyToReply")
   attachments  Attachment[]
@@ -65,11 +66,11 @@ model Reply {
 model Attachment {
   id         Int      @id @default(autoincrement())
   targetType String
-  targetId    Int
-  mimeType    String
-  sizeBytes   Int
-  path        String
-  createdAt   DateTime @default(now())
+  targetId   Int
+  mimeType   String
+  sizeBytes  Int
+  path       String
+  createdAt  DateTime @default(now())
 
   postId  Int?
   replyId Int?
