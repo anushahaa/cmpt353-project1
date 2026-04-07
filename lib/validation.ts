@@ -48,11 +48,20 @@ export const postSchema = z.object({
 
 export const replySchema = z.object({
   postId: z.coerce.number().int().positive(),
+  parentReplyId: z
+    .union([z.coerce.number().int().positive(), z.literal(""), z.null(), z.undefined()])
+    .optional(),
   body: z
     .string()
     .trim()
     .min(1, "Reply cannot be empty.")
     .max(3000, "Reply must be at most 3000 characters.")
+});
+
+export const voteSchema = z.object({
+  targetType: z.enum(["post", "reply"]),
+  targetId: z.coerce.number().int().positive(),
+  value: z.union([z.literal(-1), z.literal(0), z.literal(1)])
 });
 
 export function formatZodError(error: z.ZodError) {

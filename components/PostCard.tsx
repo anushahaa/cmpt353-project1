@@ -1,31 +1,6 @@
 import ReplyForm from "./ReplyForm";
-
-type Attachment = {
-  id: number;
-  mimeType: string;
-};
-
-type Reply = {
-  id: number;
-  body: string;
-  createdAt: Date;
-  author: {
-    displayName: string;
-  };
-  attachments: Attachment[];
-};
-
-type Post = {
-  id: number;
-  title: string;
-  body: string;
-  createdAt: Date;
-  author: {
-    displayName: string;
-  };
-  attachments: Attachment[];
-  replies: Reply[];
-};
+import ReplyThread from "./ReplyThread";
+import VoteButtons from "./VoteButtons";
 
 type CurrentUser =
   | {
@@ -35,6 +10,51 @@ type CurrentUser =
       role: string;
     }
   | null;
+
+type ReplyNode = {
+  id: number;
+  postId: number;
+  parentReplyId: number | null;
+  body: string;
+  createdAt: Date | string;
+  authorId: number;
+  author: {
+    displayName: string;
+  };
+  attachments: {
+    id: number;
+    mimeType: string;
+  }[];
+  voteSummary: {
+    score: number;
+    upvotes: number;
+    downvotes: number;
+    currentUserVote: number;
+  };
+  children: ReplyNode[];
+};
+
+type Post = {
+  id: number;
+  title: string;
+  body: string;
+  createdAt: Date | string;
+  authorId: number;
+  author: {
+    displayName: string;
+  };
+  attachments: {
+    id: number;
+    mimeType: string;
+  }[];
+  voteSummary: {
+    score: number;
+    upvotes: number;
+    downvotes: number;
+    currentUserVote: number;
+  };
+  replies: ReplyNode[];
+};
 
 export default function PostCard({
   post,
@@ -60,31 +80,23 @@ export default function PostCard({
         />
       ))}
 
+      <VoteButtons
+        targetType="post"
+        targetId={post.id}
+        initialScore={post.voteSummary.score}
+        initialUpvotes={post.voteSummary.upvotes}
+        initialDownvotes={post.voteSummary.downvotes}
+        initialUserVote={post.voteSummary.currentUserVote}
+        currentUser={currentUser}
+        isOwnContent={currentUser?.id === post.authorId}
+      />
+
       <section className="replies">
         <h4>Replies</h4>
         {post.replies.length === 0 ? (
           <div className="empty-state">No replies yet.</div>
         ) : (
-          <div className="stack">
-            {post.replies.map((reply) => (
-              <div key={reply.id} className="reply-card">
-                <p>{reply.body}</p>
-                <p className="meta">
-                  By {reply.author.displayName} ·{" "}
-                  {new Date(reply.createdAt).toLocaleString()}
-                </p>
-
-                {reply.attachments.map((attachment) => (
-                  <img
-                    key={attachment.id}
-                    src={`/api/attachments/${attachment.id}`}
-                    alt="Reply screenshot attachment"
-                    className="attachment-img"
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
+          <ReplyThread replies={post.replies} currentUser={currentUser} />
         )}
 
         <div style={{ marginTop: "1rem" }}>

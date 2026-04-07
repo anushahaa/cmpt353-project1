@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/session";
 import { isAllowedUpload, saveFile } from "@/lib/upload";
 import { replySchema, formatZodError } from "@/lib/validation";
 import { NextRequest, NextResponse } from "next/server";
@@ -11,7 +12,8 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "asc" },
     include: {
       author: true,
-      attachments: true
+      attachments: true,
+      votes: true
     }
   });
 
@@ -20,11 +22,25 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Access denied. Please log in to reply." },
+        { status: 401 }
+      );
+    }
+
     const formData = await req.formData();
+
+    const rawParentReplyId = formData.get("parentReplyId");
 
     const payload = {
       postId: formData.get("postId"),
-      authorId: formData.get("authorId"),
+      parentReplyId:
+        rawParentReplyId === "" || rawParentReplyId === null
+          ? undefined
+          : rawParentReplyId,
       body: formData.get("body")
     };
 
@@ -37,12 +53,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const normalizedParentReplyId =
+      parsed.data.parentReplyId === "" ||
+      parsed.data.parentReplyId === null ||
+      parsed.data.parentReplyId === undefined
+        ? null
+        : Number(parsed.data.parentReplyId);
+
+    if (normalizedParentReplyId !== null) {
+      const parentReply = await prisma.reply.findUnique({
+        where: { id: normalizedParentReplyId }
+      });
+
+      if (!parentReply) {
+        return NextResponse.json(
+          { error: "Parent reply not found." },
+          { status: 404 }
+        );
+      }
+
+      if (parentReply.postId !== parsed.data.postId) {
+        return NextResponse.json(
+          { error: "Parent reply must belong to the same post." },
+          { status: 400 }
+        );
+      }
+    }
+
     const attachment = formData.get("attachment");
 
     const reply = await prisma.reply.create({
       data: {
-        ...parsed.data,
-        parentReplyId: null
+        postId: parsed.data.postId,
+        body: parsed.data.body,
+        authorId: currentUser.id,
+        parentReplyId: normalizedParentReplyId
       }
     });
 

@@ -69,7 +69,7 @@ async function main() {
       }
     });
 
-    await prisma.reply.create({
+    const reply1 = await prisma.reply.create({
       data: {
         postId: post1.id,
         authorId: bob.id,
@@ -77,12 +77,51 @@ async function main() {
       }
     });
 
-    await prisma.post.create({
+    await prisma.reply.create({
+      data: {
+        postId: post1.id,
+        parentReplyId: reply1.id,
+        authorId: alice.id,
+        body: "That helped. I had the wrong body field names."
+      }
+    });
+
+    const post2 = await prisma.post.create({
       data: {
         channelId: dockerChannel.id,
         authorId: bob.id,
         title: "Docker container cannot connect to Postgres",
         body: "My app works locally but inside Docker it cannot reach the database service."
+      }
+    });
+
+    await prisma.vote.create({
+      data: {
+        userId: bob.id,
+        targetType: "post",
+        targetId: post1.id,
+        value: 1,
+        postId: post1.id
+      }
+    });
+
+    await prisma.vote.create({
+      data: {
+        userId: alice.id,
+        targetType: "reply",
+        targetId: reply1.id,
+        value: 1,
+        replyId: reply1.id
+      }
+    });
+
+    await prisma.vote.create({
+      data: {
+        userId: admin.id,
+        targetType: "post",
+        targetId: post2.id,
+        value: -1,
+        postId: post2.id
       }
     });
 

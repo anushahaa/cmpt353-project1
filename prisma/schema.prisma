@@ -16,7 +16,10 @@ model User {
   channels     Channel[]
   posts        Post[]
   replies      Reply[]
+  votes        Vote[]
   createdAt    DateTime  @default(now())
+
+  @@index([displayName])
 }
 
 model Channel {
@@ -28,6 +31,8 @@ model Channel {
 
   creator User   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   posts   Post[]
+
+  @@index([name])
 }
 
 model Post {
@@ -42,8 +47,11 @@ model Post {
   author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   replies     Reply[]
   attachments Attachment[]
+  votes       Vote[]
 
   @@index([channelId, createdAt])
+  @@index([authorId, createdAt])
+  @@index([title])
 }
 
 model Reply {
@@ -59,8 +67,32 @@ model Reply {
   parentReply  Reply?  @relation("ReplyToReply", fields: [parentReplyId], references: [id], onDelete: Cascade)
   childReplies Reply[] @relation("ReplyToReply")
   attachments  Attachment[]
+  votes        Vote[]
 
   @@index([postId, createdAt])
+  @@index([authorId, createdAt])
+  @@index([parentReplyId])
+}
+
+model Vote {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  targetType String
+  targetId   Int
+  value      Int
+  createdAt  DateTime @default(now())
+
+  postId  Int?
+  replyId Int?
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post  Post?  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reply Reply? @relation(fields: [replyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetType, targetId])
+  @@index([targetType, targetId])
+  @@index([postId])
+  @@index([replyId])
 }
 
 model Attachment {

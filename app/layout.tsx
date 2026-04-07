@@ -6,7 +6,7 @@ import AuthStatus from "@/components/AuthStatus";
 
 export const metadata = {
   title: "Channel-Based Programming Q&A Tool",
-  description: "Part 1 + Part 2 project implementation"
+  description: "Part 1 to Part 4 project implementation"
 };
 
 export default async function RootLayout({
@@ -22,13 +22,17 @@ export default async function RootLayout({
             <Link href="/" className="brand">
               DevDiscuss
             </Link>
+
             <nav className="small-gap">
               <Link href="/">Home</Link>
+              <Link href="/search">Search</Link>
               {currentUser?.role === "admin" && <Link href="/admin">Admin</Link>}
             </nav>
+
             <AuthStatus currentUser={currentUser} />
           </div>
         </header>
+
         <main className="container">{children}</main>
       </body>
     </html>

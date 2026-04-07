@@ -14,10 +14,14 @@ type CurrentUser =
 
 export default function ReplyForm({
   postId,
-  currentUser
+  parentReplyId,
+  currentUser,
+  compact = false
 }: {
   postId: number;
+  parentReplyId?: number | null;
   currentUser: CurrentUser;
+  compact?: boolean;
 }) {
   const [body, setBody] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -41,6 +45,10 @@ export default function ReplyForm({
       const formData = new FormData();
       formData.append("postId", String(postId));
       formData.append("body", body);
+
+      if (parentReplyId) {
+        formData.append("parentReplyId", String(parentReplyId));
+      }
 
       if (file) {
         formData.append("attachment", file);
@@ -83,23 +91,31 @@ export default function ReplyForm({
 
   return (
     <form onSubmit={handleSubmit}>
-      <p className="meta">Replying as {currentUser.displayName}</p>
+      <p className="meta">
+        {parentReplyId ? "Replying to a reply" : "Replying to a post"} as{" "}
+        {currentUser.displayName}
+      </p>
 
       <div style={{ marginTop: "0.8rem" }}>
-        <label htmlFor={`reply-body-${postId}`}>Reply</label>
+        <label htmlFor={`reply-body-${postId}-${parentReplyId ?? "root"}`}>
+          {parentReplyId ? "Nested reply" : "Reply"}
+        </label>
         <textarea
-          id={`reply-body-${postId}`}
+          id={`reply-body-${postId}-${parentReplyId ?? "root"}`}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Write your reply"
+          placeholder={parentReplyId ? "Write a nested reply" : "Write your reply"}
           required
+          style={compact ? { minHeight: "80px" } : undefined}
         />
       </div>
 
       <div style={{ marginTop: "0.8rem" }}>
-        <label htmlFor={`reply-file-${postId}`}>Screenshot (optional)</label>
+        <label htmlFor={`reply-file-${postId}-${parentReplyId ?? "root"}`}>
+          Screenshot (optional)
+        </label>
         <input
-          id={`reply-file-${postId}`}
+          id={`reply-file-${postId}-${parentReplyId ?? "root"}`}
           type="file"
           accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
@@ -108,7 +124,7 @@ export default function ReplyForm({
 
       <div style={{ marginTop: "1rem" }}>
         <button type="submit" disabled={loading}>
-          {loading ? "Replying..." : "Reply to post"}
+          {loading ? "Replying..." : parentReplyId ? "Reply to reply" : "Reply to post"}
         </button>
       </div>
 
